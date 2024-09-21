@@ -7,7 +7,7 @@ dotenv.config(); // Load environment variables
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Connect to the database
+// Connect to the database gvv
 connectDB();
 
 // Middleware to parse JSON requests
