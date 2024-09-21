@@ -9,7 +9,7 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
     dialect: 'mysql',
 });
 
-// Authenticate the connection
+// Function to authenticate the connection
 const connectDB = async () => {
     try {
         await sequelize.authenticate();
