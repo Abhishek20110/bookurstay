@@ -1,18 +1,17 @@
+// Import necessary modules
 import dotenv from 'dotenv';
 import express from 'express';
-import { connectDB } from './config/db.js';
 
-dotenv.config(); // Load environment variables
+// Load environment variables from .env file
+dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware to parse JSON
+// Middleware to parse JSON requests
 app.use(express.json());
 
-// Connect to the database
-connectDB();
-
-// Define a route for the root URL
+// Simple route for the root URL
 app.get('/', (req, res) => {
     res.send('Welcome to the backend');
 });
