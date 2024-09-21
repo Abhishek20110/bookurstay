@@ -4,10 +4,10 @@ import { Sequelize } from 'sequelize';
 // Load environment variables
 dotenv.config();
 
-// Create a new Sequelize instance
+// Create a new Sequelize instance with mysql2
 const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
     host: process.env.DB_HOST,
-    dialect: 'mysql',
+    dialect: 'mysql2', // Ensure you're using mysql2 here
     pool: {
         max: 5,
         min: 0,
