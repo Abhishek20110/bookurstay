@@ -1,13 +1,14 @@
 import { Sequelize } from 'sequelize';
+import mysql2 from 'mysql2';  // Import mysql2 in ES module syntax
 import dotenv from 'dotenv';
 
 dotenv.config(); // Load environment variables
 
 // Create a new Sequelize instance
-const db = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
+const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
     host: process.env.DB_HOST,
     dialect: 'mysql',
-    dialectModule: require('mysql2'), // Explicitly set mysql2 as the dialect module
+    dialectModule: mysql2,  // Use the mysql2 import directly
     pool: {
         max: 5,
         min: 0,
@@ -19,7 +20,7 @@ const db = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.D
 // Function to authenticate the connection
 const connectDB = async () => {
     try {
-        await db.authenticate();
+        await sequelize.authenticate();
         console.log('Database connection established successfully.');
     } catch (error) {
         console.error('Unable to connect to the database:', error);
@@ -27,4 +28,4 @@ const connectDB = async () => {
     }
 };
 
-export { db, connectDB };
+export { sequelize, connectDB };
