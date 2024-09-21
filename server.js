@@ -17,7 +17,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
     res.send('Welcome to the backend');
 });
-app.use('/api/faqs', faqRoutes);
+app.use('/api/faqs', router);
 
 // Start the server
 app.listen(PORT, () => {
