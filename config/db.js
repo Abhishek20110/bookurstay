@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { Sequelize } from 'sequelize';
+import mysql from 'mysql'
 
 // Load environment variables
 dotenv.config();
