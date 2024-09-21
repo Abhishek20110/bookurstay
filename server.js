@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import express from 'express';
-import { connectDB } from './config/db.js';
+//import { connectDB } from './config/db.js';
 
 dotenv.config(); // Load environment variables
 
@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Connect to the database gvv
-connectDB();
+//connectDB();
 
 // Middleware to parse JSON requests
 app.use(express.json());
