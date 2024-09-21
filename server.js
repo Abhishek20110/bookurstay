@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import express from 'express';
-import { connectDB } from './db.js'; // Import the connectDB function
+import { connectDB } from './db.js'; // Ensure this path is correct
 
 dotenv.config();
 
