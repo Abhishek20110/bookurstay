@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import { connectDB } from './config/db.js'; // Ensure this path is correct
-
+import router from './routes/faqRoutes.js';
 dotenv.config();
 
 const app = express();
@@ -17,6 +17,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
     res.send('Welcome to the backend');
 });
+app.use('/api/faqs', faqRoutes);
 
 // Start the server
 app.listen(PORT, () => {
