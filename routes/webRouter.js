@@ -9,6 +9,6 @@ const webRouter = express.Router();
 const storage = multer.memoryStorage(); 
 const upload = multer({ storage: storage });
 
-webRouter.post('/search' ,upload.none(),  search);
+webRouter.get('/search' ,upload.none(),  search);
 
 export default webRouter;
