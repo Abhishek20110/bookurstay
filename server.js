@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import { connectDB } from './config/db.js';
-import webRouter from './routes/webRoutes.js';
+import webRouter from './routes/webRouter.js';
 
 dotenv.config(); // Load environment variables
 const app = express();
