@@ -1,45 +1,44 @@
 import { sequelize } from '../config/db.js';
 
 export const search = async (req, res) => {
-    const { destination, checkin_date, checkout_date, room_no, adultno, child_no } = req.body;
+    const { destination, checkin_date, checkout_date, room_no, adultno = 1, child_no = 0 } = req.body;
+
+    console.log('adultno:', adultno, 'child_no:', child_no);
 
     // Validate required fields
     if (!destination || !checkin_date || !checkout_date) {
         return res.status(400).json({ message: 'Destination, check-in date, and check-out date are required.' });
     }
 
-    // Set default values for adults and children
-    const totalAdults = adultno || 1;
-    const totalChildren = child_no || 0;
+    // Helper function to format date using JavaScript's Date object
+    const formatDate = (dateStr) => {
+        const [day, month, year] = dateStr.split('-');
+        return `${year}-${month}-${day}`;
+    };
+
+    // Set default values and format the input dates
+    const formattedCheckinDate = formatDate(checkin_date);
+    const formattedCheckoutDate = formatDate(checkout_date);
+
+    // Helper function to get all dates between check-in and check-out
+    const getDatesBetween = (startDate, endDate) => {
+        const dates = [];
+        let currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+            dates.push(currentDate.toISOString().split('T')[0]);
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        return dates;
+    };
+
+    const startDate = new Date(formattedCheckinDate);
+    const endDate = new Date(formattedCheckoutDate);
+    const allDates = getDatesBetween(startDate, endDate);
 
     try {
         let response = [];
 
-        // Helper function to format date
-        const formatDate = (dateStr) => {
-            const [day, month, year] = dateStr.split('-');
-            return `${year}-${month}-${day}`;
-        };
-
-        const formattedCheckinDate = formatDate(checkin_date);
-        const formattedCheckoutDate = formatDate(checkout_date);
-
-        // Helper function to get all dates between check-in and check-out
-        const getDatesBetween = (startDate, endDate) => {
-            const dates = [];
-            let currentDate = new Date(startDate);
-            while (currentDate <= endDate) {
-                dates.push(currentDate.toISOString().split('T')[0]);
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-            return dates;
-        };
-
-        const startDate = new Date(formattedCheckinDate);
-        const endDate = new Date(formattedCheckoutDate);
-        const allDates = getDatesBetween(startDate, endDate);
-
-        // Fetch hotels based on the destination
+        // Fetch hotels based on destination
         const hotels = await sequelize.query(
             `SELECT hotels.*, hotel_infos.bannerimg as image 
              FROM hotels 
@@ -58,7 +57,7 @@ export const search = async (req, res) => {
 
         const hotelIds = hotels.map(hotel => hotel.id);
 
-        // Fetch all available rooms for the hotels in a single query
+        // Fetch all available rooms for the hotels
         const rooms = await sequelize.query(
             `SELECT 
                 rooms.*,
@@ -80,7 +79,7 @@ export const search = async (req, res) => {
             return res.status(200).json({ message: 'No available rooms found for the given hotels.' });
         }
 
-        // Fetch all booked rooms for the given date range in a single query
+        // Fetch all booked rooms for the given date range
         const bookedRooms = await sequelize.query(
             'SELECT room_id, booked_for FROM booked_rooms WHERE room_id IN (:roomIds) AND booked_for IN (:allDates)',
             {
@@ -89,7 +88,7 @@ export const search = async (req, res) => {
             }
         );
 
-        // Create a map for easy lookup of booked rooms
+        // Map booked rooms for fast lookup
         const bookedRoomMap = bookedRooms.reduce((map, { room_id, booked_for }) => {
             if (!map.has(room_id)) {
                 map.set(room_id, new Set());
@@ -98,7 +97,7 @@ export const search = async (req, res) => {
             return map;
         }, new Map());
 
-        // Helper function to calculate the number of rooms needed
+        // Function to calculate minimum rooms needed
         const calculateMinRoomsNeeded = (rooms, adults, children) => {
             rooms.sort((a, b) => (b.total_adult + b.total_child) - (a.total_adult + a.total_child));
 
@@ -132,7 +131,7 @@ export const search = async (req, res) => {
             });
 
             if (availableRooms.length) {
-                const roomsNeeded = calculateMinRoomsNeeded(availableRooms, totalAdults, totalChildren);
+                const roomsNeeded = calculateMinRoomsNeeded(availableRooms, adultno, child_no);
                 const finalRoomsNeeded = room_no || roomsNeeded;
 
                 if (availableRooms.length >= finalRoomsNeeded) {
@@ -148,26 +147,30 @@ export const search = async (req, res) => {
                     const maxPrice = Math.max(...availableRooms.map(room => room.price));
                     const groupedRooms = Object.fromEntries(roomsByType);
 
-                    console.log(`Hotel ID: ${hotel.id}, Hotel Name: ${hotel.name}, Total Available Rooms: ${availableRooms.length}`);
+                    const maxAdults = availableRooms.reduce((sum, room) => sum + room.total_adult, 0);
+                    const maxChildren = availableRooms.reduce((sum, room) => sum + room.total_child, 0);
 
-                    acc.push({
-                        ...hotel,
-                        availableRooms: groupedRooms
-                    });
+                    if (maxAdults >= adultno && maxChildren >= child_no) {
+                        console.log(`Hotel ID: ${hotel.id}, Hotel Name: ${hotel.name}, Total Available Rooms: ${availableRooms.length}, Can Accommodate: Max Adults: ${maxAdults}, Max Children: ${maxChildren}`);
 
-                    // Also push in response
-                    response.push({
-                        hotel_id: hotel.id,
-                        hotel_name: hotel.name,
-                        image: hotel.id === 23 
-                            ? "https://sanabeachresort.bookurstay.in/assets/images/hotelImage/" + hotel.image 
-                            : hotel.image,
-                        total_available_rooms: availableRooms.length,
-                        min_price: minPrice,
-                        max_price: maxPrice,
-                        available_rooms: groupedRooms
-                    });
-                    
+                        acc.push({
+                            ...hotel,
+                            availableRooms: groupedRooms
+                        });
+
+                        // Push to response
+                        response.push({
+                            hotel_id: hotel.id,
+                            hotel_name: hotel.name,
+                            image: hotel.id === 23
+                                ? "https://sanabeachresort.bookurstay.in/assets/images/hotelImage/" + hotel.image
+                                : hotel.image,
+                            total_available_rooms: availableRooms.length,
+                            min_price: minPrice,
+                            max_price: maxPrice,
+                            available_rooms: groupedRooms
+                        });
+                    }
                 }
             }
 
@@ -178,7 +181,7 @@ export const search = async (req, res) => {
             console.log('Available hotels:', availableHotels);
             res.status(200).json({
                 message: 'success',
-                data: { response ,/*  availableHotels */ }
+                data: { response }
             });
         } else {
             res.status(200).json({ message: 'No available hotels found for the given criteria.' });
