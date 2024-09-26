@@ -1,7 +1,9 @@
 import express from 'express';
 import multer from 'multer';
 
-import { search } from '../controller/searchController.js';
+import { search ,
+    getHotelDetails
+ } from '../controller/searchController.js';
 
 
 
@@ -10,5 +12,6 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 webRouter.get('/search' ,upload.none(),  search);
+webRouter.get('/hotel/:hotel_id', getHotelDetails);
 
 export default webRouter;

@@ -191,3 +191,93 @@ export const search = async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 };
+
+// Hotel details after search 
+export const getHotelDetails = async (req, res) => {
+    const { hotel_id } = req.params;
+
+    try {
+        // Fetch the hotel details
+        const hotelDetails = await sequelize.query(
+            `SELECT hotels.*, hotel_infos.bannerimg AS image, hotel_infos.description
+             FROM hotels 
+             LEFT JOIN hotel_infos ON hotels.id = hotel_infos.hotel_id 
+             WHERE hotels.id = :hotel_id`,
+            {
+                replacements: { hotel_id },
+                type: sequelize.QueryTypes.SELECT
+            }
+        );
+
+        if (!hotelDetails.length) {
+            return res.status(404).json({ message: 'Hotel not found' });
+        }
+
+        // Fetch room details for the hotel (without grouping by room type)
+        const rooms = await sequelize.query(
+            `SELECT 
+                rooms.*,
+                room_types.name AS room_type,
+                room_types.total_adult,
+                room_types.total_child,
+                room_types.fare AS price,
+                GROUP_CONCAT(DISTINCT room_type_images.image) AS images
+            FROM rooms
+            LEFT JOIN room_types ON rooms.room_type_id = room_types.id
+            LEFT JOIN room_type_images ON rooms.room_type_id = room_type_images.room_type_id
+            WHERE rooms.hotel_id = :hotel_id AND rooms.status = "1"
+            GROUP BY rooms.id`,
+            {
+                replacements: { hotel_id },
+                type: sequelize.QueryTypes.SELECT
+            }
+        );
+
+        if (!rooms.length) {
+            return res.status(404).json({ message: 'No rooms available for this hotel' });
+        }
+
+        // Group room types and count the number of rooms per type
+        const groupedRooms = rooms.reduce((acc, room) => {
+            // Extract the first image from the GROUP_CONCAT result
+            const image = room.images?.split(',')[0] || null;
+
+            if (!acc[room.room_type]) {
+                acc[room.room_type] = {
+                    room_type: room.room_type,
+                    total_adult: room.total_adult,
+                    total_child: room.total_child,
+                    price: room.price,
+                    image, // Assign one image per room type
+                    rooms: [],
+                    room_count: 0 // Initialize room count
+                };
+            }
+
+            // Add each room individually to the corresponding room type
+            acc[room.room_type].rooms.push({
+                id: room.id,
+                room_no: room.room_number
+            });
+
+            // Increment the room count for this room type
+            acc[room.room_type].room_count++;
+
+            return acc;
+        }, {});
+
+        // Prepare the response data
+        const response = {
+            hotel: hotelDetails[0],
+            rooms: groupedRooms
+        };
+
+        res.status(200).json({
+            message: 'success',
+            data: response
+        });
+    } catch (error) {
+        console.error('Error fetching hotel details:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
